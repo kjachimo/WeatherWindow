@@ -6,11 +6,11 @@ public class EnvironmentController : MonoBehaviour {
     [SerializeField] private WeatherService weatherService;
 
     [Header("Elementy sceny")]
-    [SerializeField] private PhysicsMaterial2D groundMaterial; // ten sam, co przypięty do colliderów podłoża
+    [SerializeField] private PhysicsMaterial2D groundMaterial; 
     [SerializeField] private ParticleSystem rainFx;
     [SerializeField] private ParticleSystem snowFx;
     [SerializeField] private UnityEngine.Rendering.Universal.Light2D globalLight2D;
-    [SerializeField] private Rigidbody2D playerRb;             // gracz (Dynamic)
+    [SerializeField] private Rigidbody2D playerRb;  
 
     [Header("Parametry reagowania")]
     [SerializeField, Tooltip("Spadek tarcia na 1 mm/h opadu")]
@@ -64,7 +64,6 @@ public class EnvironmentController : MonoBehaviour {
         var emission = fx.emission;
         emission.enabled = on;
 
-        // gęstość = ~50 cząstek na 1 mm/h (min 10, max 600)
         var rate = emission.rateOverTime;
         rate.constant = Mathf.Clamp(50f * intensity, 10f, 600f);
         emission.rateOverTime = rate;

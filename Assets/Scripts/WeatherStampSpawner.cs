@@ -10,9 +10,7 @@ public class WeatherStampSpawner : MonoBehaviour
     [SerializeField] private Vector2 patchSize = new Vector2(8f, 8f);
     [SerializeField] private float patchLifetime = -1f; // -1 = nieskończony
 
-    /// <summary>
     /// Stawia patch w miejscu gracza na podstawie aktualnego cache'u z WeatherService.
-    /// </summary>
     public void DropPatchHere()
     {
         var cached = weatherService ? weatherService.GetCached() : null;
@@ -24,9 +22,7 @@ public class WeatherStampSpawner : MonoBehaviour
         DropPatchHere(cached);
     }
 
-    /// <summary>
-    /// Stawia patch w miejscu gracza na podstawie podanego modelu (np. preset Rain/Snow/Freeze).
-    /// </summary>
+    /// Stawia patch w miejscu gracza na podstawie modelu
     public void DropPatchHere(WeatherModel model)
     {
         if (patchPrefab == null)

@@ -30,17 +30,17 @@ public class PlantColumnGrower : MonoBehaviour
     [Tooltip("Co ile sekund aktualizować Tilemap (optymalizacja)")]
     public float updateInterval = 0.05f;
 
-    // — stan
+    // stan
     [SerializeField] int currentRows = 0;
     [SerializeField] int maxHeightCells = 1;
     [SerializeField] int widthCells = 1;
     Vector3Int bottomLeftCell;
 
-    // — refs
+    // refs
     BoxCollider2D trigger;
     Grid grid;
 
-    // — akumulatory
+    //akumulatory
     float growAccumulatorRows = 0f;
     float updAccum = 0f;
 
@@ -75,8 +75,8 @@ public class PlantColumnGrower : MonoBehaviour
 
     void ComputeCellsFromCollider()
     {
-        var b = trigger.bounds;          // world
-        var cs = grid.cellSize;          // world
+        var b = trigger.bounds;          
+        var cs = grid.cellSize;          
 
         maxHeightCells = overrideMaxHeight > 0
             ? overrideMaxHeight
@@ -120,18 +120,17 @@ public class PlantColumnGrower : MonoBehaviour
         {
             growAccumulatorRows += growCellsPerSecond * Time.deltaTime;
 
-            // ile całych rzędów przybyło od ostatniego rysowania?
+            
             int deltaWholeRows = Mathf.FloorToInt(growAccumulatorRows);
             if (deltaWholeRows > 0)
             {
                 int target = Mathf.Min(maxHeightCells, currentRows + deltaWholeRows);
-                // throttling rysowania (nie musimy malować co klatkę, ale jeśli dużo przybyło – malujemy od razu)
+                
                 updAccum += Time.deltaTime;
                 if (updAccum >= updateInterval || target >= maxHeightCells)
                 {
                     DrawRowsAdditive(target);
                     currentRows = target;
-                    // odejmij wykorzystane „cząstki” rzędów
                     growAccumulatorRows -= deltaWholeRows;
                     updAccum = 0f;
                 }

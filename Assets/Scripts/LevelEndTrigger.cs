@@ -13,11 +13,10 @@ public class LevelEndTrigger : MonoBehaviour
     public bool pauseOnEnd = true;
 
     [Header("Opcjonalnie")]
-    public PlayerMovement playerMovement; // jeśli chcesz zablokować ruch
+    public PlayerMovement playerMovement;
 
     private bool _active = false;
 
-    // zapamiętany stan kursora
     private CursorLockMode _prevLock;
     private bool _prevVisible;
 
@@ -52,7 +51,6 @@ public class LevelEndTrigger : MonoBehaviour
 
         if (playerMovement) playerMovement.inputBlocked = true;
 
-        // zapamiętaj i ustaw kursor
         _prevLock = Cursor.lockState;
         _prevVisible = Cursor.visible;
         Cursor.lockState = CursorLockMode.None;
