@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.unity.2d.aseprite": "1.1.10",
     "com.unity.2d.tilemap.extras": "2.2.8",
     "com.unity.cinemachine": "2.10.3",
     "com.unity.collab-proxy": "2.5.2",

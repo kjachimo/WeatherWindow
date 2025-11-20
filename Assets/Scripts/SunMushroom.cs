@@ -17,10 +17,12 @@ public class SunMushroom : MonoBehaviour
     [Header("Sensor")]
     public bool autoFitToTilemapBounds = true;
 
-    [Header("Tint (opcjonalnie)")]
-    public Color baseColor = Color.white;
-    public Color sunColor  = new Color(0.7f, 0.9f, 1f, 1f);
-    public float fadeSpeed = 3f;
+    [Header("Tiles (sprite'y)")]
+    [Tooltip("Tile używany normalnie (bez słońca). Jeśli puste, zostanie pobrany z istniejącej tilemapy.")]
+    public TileBase normalTile;
+
+    [Tooltip("Tile używany, gdy grzyby są w 'gorącym słońcu'.")]
+    public TileBase sunTile;
 
     // wewnętrzne
     private readonly HashSet<WeatherPatchLocal> _patches = new();
@@ -28,6 +30,10 @@ public class SunMushroom : MonoBehaviour
     private Rigidbody2D _rb;
     private TilemapRenderer _tmr;
     private bool _wasSunny = false;
+
+    // przechowujemy oryginalny układ tile'i, żeby móc go przywrócić
+    private readonly List<Vector3Int> _mushroomCells = new();
+    private readonly Dictionary<Vector3Int, TileBase> _originalTiles = new();
 
     void Awake()
     {
@@ -59,7 +65,7 @@ public class SunMushroom : MonoBehaviour
 
         if (autoFitToTilemapBounds && _tmr)
         {
-            var wb = _tmr.bounds; // world bounds
+            var wb = _tmr.bounds;
             Vector2 size   = transform.InverseTransformVector(wb.size);
             Vector2 center = transform.InverseTransformPoint(wb.center) - transform.position;
             size.x = Mathf.Abs(size.x); size.y = Mathf.Abs(size.y);
@@ -68,13 +74,37 @@ public class SunMushroom : MonoBehaviour
             Debug.Log($"[SunMushroomSolidSimple] Auto-fit sensor. size={size}, offset={center}");
         }
 
-        // start: kolizja wyłączona (grzyby „miękkie”)
+        CacheOriginalTiles();
+
+        if (normalTile == null && _mushroomCells.Count > 0)
+        {
+            normalTile = _originalTiles[_mushroomCells[0]];
+        }
+
+        // start kolizja wyłączona
         mushroomCol.enabled = false;
         mushroomCol.isTrigger = false; // kiedy włączymy, ma być solid
-        if (mushroomTilemap) mushroomTilemap.color = baseColor;
 
-        // ważne: tile assets grzybów muszą mieć Collider Type ≠ None (Sprite/Grid)
         Debug.Log("[SunMushroomSolidSimple] Upewnij się, że Tile assets mają Collider Type ≠ None.");
+    }
+
+    void CacheOriginalTiles()
+    {
+        _mushroomCells.Clear();
+        _originalTiles.Clear();
+
+        if (!mushroomTilemap) return;
+
+        var bounds = mushroomTilemap.cellBounds;
+        foreach (var pos in bounds.allPositionsWithin)
+        {
+            var t = mushroomTilemap.GetTile(pos);
+            if (t != null)
+            {
+                _mushroomCells.Add(pos);
+                _originalTiles[pos] = t;
+            }
+        }
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -106,19 +136,43 @@ public class SunMushroom : MonoBehaviour
 
         if (sunny != _wasSunny)
         {
-            // przełącz jedyny collider
+            // przełącz collider
             mushroomCol.enabled = sunny;
             //ForcePhysicsRefresh();
-           // Debug.Log($"[SunMushroomSolidSimple] Collider {(sunny ? "ON" : "OFF")}");
+            //Debug.Log($"[SunMushroomSolidSimple] Collider {(sunny ? "ON" : "OFF")}");
+
+            // NOWE: przełącz sprite'y (tile'e) zamiast tintu
+            ApplySunTiles(sunny);
 
             _wasSunny = sunny;
         }
 
-        // tint dla feedbacku (opcjonalnie)
-        if (mushroomTilemap)
+    }
+
+    void ApplySunTiles(bool sunny)
+    {
+        if (!mushroomTilemap) return;
+
+        if (sunny)
         {
-            var target = sunny ? sunColor : baseColor;
-            mushroomTilemap.color = Color.Lerp(mushroomTilemap.color, target, Time.deltaTime * fadeSpeed);
+            if (sunTile == null)
+            {
+                Debug.LogWarning("[SunMushroomSolidSimple] sunTile nie ustawiony – nie mogę zmienić sprite'a.");
+                return;
+            }
+
+            foreach (var pos in _mushroomCells)
+            {
+                mushroomTilemap.SetTile(pos, sunTile);
+            }
+        }
+        else
+        {
+            // przywróć oryginalny układ kafelków
+            foreach (var kv in _originalTiles)
+            {
+                mushroomTilemap.SetTile(kv.Key, kv.Value);
+            }
         }
 
     }

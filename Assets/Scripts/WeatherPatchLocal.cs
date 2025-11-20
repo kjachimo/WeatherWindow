@@ -159,7 +159,7 @@ public class WeatherPatchLocal : MonoBehaviour
 
     void Update()
     {
-        // --- miękkie wygaszanie przed końcem życia ---
+        // miękkie wygaszanie przed końcem życia
         if (_dieAt > 0f && fadeOutSeconds > 0f && !_fading)
         {
             if (Time.time >= _fadeStartAt)
@@ -192,7 +192,7 @@ public class WeatherPatchLocal : MonoBehaviour
             //if (localLight) localLight.intensity = _lightBase * k;
         }
 
-        // --- twardy koniec życia ---
+        // twardy koniec życia
         if (_dieAt > 0f && Time.time >= _dieAt)
         {
             foreach (var kv in _origMat)

@@ -10,6 +10,9 @@ public class RainContainer : MonoBehaviour
     public Tilemap waterTilemap;
     public TileBase waterTile;
 
+    [Tooltip("Tile używany, gdy woda jest zamarznięta (opcjonalny).")]
+    public TileBase frozenWaterTile;
+
     [Header("Symmetric Fill/Dry")]
     [Tooltip("Tempo zmiany poziomu (0..1) na sekundę. Deszcz -> +, Słońce -> -.")]
     public float changePerSecond = 0.08f;
@@ -43,10 +46,9 @@ public class RainContainer : MonoBehaviour
 
     readonly HashSet<WeatherPatchLocal> patches = new();
 
-
     void Awake()
     {
-        // Root (Lake): trigger + kinematic RB
+        // Root trigger + kinematic RB
         trigger = GetComponent<BoxCollider2D>();
         trigger.isTrigger = true;
 
@@ -80,9 +82,16 @@ public class RainContainer : MonoBehaviour
         // startowy stan
         fill01 = Mathf.Clamp01(initialFill01);
         waterTilemap.ClearAllTiles();
-        currentRows = 0;
-        ApplyRows(Mathf.RoundToInt(fill01 * heightCells));
+
+        // narysuj wodę wg fill01
+        ApplyRows(GetRowsFromFill());
+
         SetFrozen(false, force: true);
+    }
+
+    int GetRowsFromFill()
+    {
+        return Mathf.RoundToInt(fill01 * heightCells);
     }
 
     void ComputeCellsFromCollider()
@@ -106,11 +115,10 @@ public class RainContainer : MonoBehaviour
 
     void Update()
     {
-        
         bool hasRain   = false;
         bool hotSun    = false;
         bool freezeNow = false;
-        //Debug.Log("frozen state= "+freezeNow);
+
         foreach (var p in patches)
         {
             if (p == null || p.Weather == null) continue;
@@ -118,24 +126,22 @@ public class RainContainer : MonoBehaviour
             float precip = p.Weather.precipitationMmH;
             float tempC  = p.Weather.temperatureC;
 
-            // deszcz: tylko deszcz (nie śnieg) i opad powyżej progu
+            // deszcz: tylko deszcz i opad powyżej progu
             if (!p.Weather.isSnow && precip > rainThresholdMmH)
                 hasRain = true;
 
             // gorące słońce: brak opadu + wysoka temp + nie-śnieg
             if (!p.Weather.isSnow && precip <= rainThresholdMmH && tempC >= hotSunTempC)
                 hotSun = true;
-                //FreezeNow=false;
 
             // mróz (śnieg lub temp <= 0)
             if (p.Weather.isSnow || tempC <= freezeTempC)
                 freezeNow = true;
-                //hotSun = false;
 
-            if (hasRain && hotSun && freezeNow) break; // wszystko wiemy
+            if (hasRain && hotSun && freezeNow) break;
         }
 
-        //zmiana poziomu
+        // zmiana poziomu
         float delta = 0f;
         if (hasRain) delta = +changePerSecond * Time.deltaTime;
         else if (hotSun) delta = -changePerSecond * Time.deltaTime;
@@ -143,32 +149,43 @@ public class RainContainer : MonoBehaviour
         if (delta != 0f)
         {
             fill01 = Mathf.Clamp01(fill01 + delta);
-            int targetRows = Mathf.RoundToInt(fill01 * heightCells);
+            int targetRows = GetRowsFromFill();
             if (targetRows != currentRows)
             {
                 ApplyRows(targetRows);
-                currentRows = targetRows;
             }
         }
 
-        
         SetFrozen(freezeNow);
-        
     }
 
     void ApplyRows(int rows)
     {
+        rows = Mathf.Clamp(rows, 0, heightCells);
+        currentRows = rows;
+
         waterTilemap.ClearAllTiles();
 
-        for (int y = 0; y < rows; y++)
+        // tile zależnie od stanu zamarznięcia
+        TileBase tileToUse = (isFrozen && frozenWaterTile != null) ? frozenWaterTile : waterTile;
+
+        for (int y = 0; y < currentRows; y++)
+        {
             for (int x = 0; x < widthCells; x++)
-                waterTilemap.SetTile(new Vector3Int(bottomLeftCell.x + x, bottomLeftCell.y + y, 0), waterTile);
+            {
+                waterTilemap.SetTile(
+                    new Vector3Int(bottomLeftCell.x + x, bottomLeftCell.y + y, 0),
+                    tileToUse
+                );
+            }
+        }
 
         // wypór na powierzchnie
         if (effector && grid)
         {
-            float worldSurfaceY = (bottomLeftCell.y + rows) * grid.cellSize.y;
-            float localSurfaceY = waterTilemap.transform.InverseTransformPoint(new Vector3(0f, worldSurfaceY, 0f)).y;
+            float worldSurfaceY = (bottomLeftCell.y + currentRows) * grid.cellSize.y;
+            float localSurfaceY = waterTilemap.transform
+                .InverseTransformPoint(new Vector3(0f, worldSurfaceY, 0f)).y;
             effector.surfaceLevel = localSurfaceY;
         }
     }
@@ -182,6 +199,10 @@ public class RainContainer : MonoBehaviour
         if (waterCol) waterCol.isTrigger = !frozen; // lód = solid, woda = trigger
         if (effector) effector.enabled = !frozen;   // wypór tylko dla wody
 
+        // przy zmianie stanu w runtime przeładuj kafelki
+        if (!force)
+        {
+            ApplyRows(currentRows);
+        }
     }
-
 }
